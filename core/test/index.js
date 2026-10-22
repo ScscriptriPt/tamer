@@ -9,3 +9,4 @@ import './store.test.ts';
 import './breakpoint.test.ts';
 import './ideas.test.ts';
 import './cli.test.ts';
+import './init.test.ts';

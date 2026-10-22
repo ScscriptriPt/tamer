@@ -46,6 +46,7 @@ class CliError extends Error {
 }
 
 const USAGE = `用法：
+  node core/src/cli.ts init
   node core/src/cli.ts plan new --date YYYY-MM-DD [--day-type normal|exception] [--exception] [--action "整体动作"] [--action 项目#N="该块动作"]
   node core/src/cli.ts plan show --date YYYY-MM-DD
   node core/src/cli.ts plan render --morning --date YYYY-MM-DD
@@ -199,10 +200,29 @@ function morningText(dataDir: string, plan: Plan, pool: Pool): string {
   return renderMorning(plan, pool, { due, today: plan.date });
 }
 
+function initCommand(dataDir: string): number {
+  const result = store.initDataDir(dataDir);
+  for (const file of result.created) {
+    process.stdout.write(`创建：${file}\n`);
+  }
+  for (const file of result.skipped) {
+    process.stderr.write(`已存在，跳过：${file}\n`);
+  }
+  process.stdout.write(`已初始化：${dataDir}\n`);
+  return 0;
+}
+
+/**
+ * Onboarding order: no pool.json means the user has not run init yet. Refuse
+ * with one actionable line instead of silently writing an empty zero-block day.
+ */
 function planNew(
   dataDir: string,
   flags: Record<string, FlagValue>,
 ): number {
+  if (!store.hasPool(dataDir)) {
+    throw new CliError('没有项目池。先跑：node core/src/cli.ts init');
+  }
   const date = dateFlag(flags);
   const dayType = dayTypeFlag(flags);
   const pool = store.readPool(dataDir);
@@ -369,7 +389,7 @@ function ideaAdd(
   const capturedAt = dateFlag(flags);
   const sameId = stringFlag(flags, 'same');
   let text = positionals.slice(2).join(' ').trim();
-  const book = store.readIdeas(dataDir);
+  const book = store.readIdeasIfPresent(dataDir);
 
   // `--same` only touches occurrences, so the text is optional; reuse the
   // stored text rather than overwriting it.
@@ -436,7 +456,7 @@ function ideaWake(
   if (at === undefined) throw new CliError('idea wake 需要 --at YYYY-MM-DD');
   if (!isDateString(at)) throw new CliError(`无效日期：${at}（要求 YYYY-MM-DD）`);
 
-  const book = store.readIdeas(dataDir);
+  const book = store.readIdeasIfPresent(dataDir);
   const result = markIdeaWake(book, id, at);
   store.writeIdeas(dataDir, result.book);
   process.stdout.write(`已更新：${result.idea.id}，${at} 唤醒\n`);
@@ -469,8 +489,8 @@ function ideaPromote(
   if (deadline !== null) parseDate(deadline);
 
   const today = dateFlag(flags);
-  const book = store.readIdeas(dataDir);
-  const pool = store.readPool(dataDir);
+  const book = store.readIdeasIfPresent(dataDir);
+  const pool = store.readPoolIfPresent(dataDir);
   const outcome = promoteIdea(book, pool, id, { kind, deadline, next, today });
 
   if (!outcome.ok) {
@@ -505,7 +525,7 @@ function ideaDiscard(
     throw new CliError('idea discard 需要 --reason "一句话"');
   }
 
-  const book = store.readIdeas(dataDir);
+  const book = store.readIdeasIfPresent(dataDir);
   const result = discardIdea(book, id, rawReason);
   store.writeIdeas(dataDir, result.book);
   process.stdout.write(`已丢弃：${result.idea.id}（${rawReason.trim()}）\n`);
@@ -519,6 +539,13 @@ function main(argv: string[]): number {
     dataDirRaw === undefined ? store.defaultDataDir() : resolve(dataDirRaw);
 
   const [scope, command] = positionals;
+
+  if (scope === 'init') {
+    if (positionals.length > 1) {
+      throw new CliError('init 不需要额外参数');
+    }
+    return initCommand(dataDir);
+  }
 
   if (scope === 'plan') {
     if (command === 'new') return planNew(dataDir, flags);

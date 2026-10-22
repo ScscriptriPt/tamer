@@ -73,6 +73,20 @@ export function writePool(dataDir: string, pool: Pool): void {
   writeJsonFile(poolFile(dataDir), pool);
 }
 
+/**
+ * Write paths start from an empty pool when the file is missing (a fresh
+ * clone has no data/), but malformed JSON still throws: 容错不等于吞错.
+ */
+export function readPoolIfPresent(dataDir: string): Pool {
+  if (!existsSync(poolFile(dataDir))) return { version: 1, projects: [] };
+  return readPool(dataDir);
+}
+
+/** `plan new` checks this first so it can refuse instead of writing a zero-block day. */
+export function hasPool(dataDir: string): boolean {
+  return existsSync(poolFile(dataDir));
+}
+
 export function readPlan(dataDir: string, date: string): Plan | null {
   const file = planFile(dataDir, date);
   if (!existsSync(file)) return null;
@@ -135,4 +149,36 @@ export function writeIdeas(dataDir: string, book: IdeaBook): void {
 export function readIdeasIfPresent(dataDir: string): IdeaBook {
   if (!existsSync(ideasFile(dataDir))) return { version: 1, ideas: [] };
   return readIdeas(dataDir);
+}
+
+export type InitResult = {
+  created: string[];
+  skipped: string[];
+};
+
+/**
+ * Onboarding for an empty data dir: create the directory and both empty books.
+ * Existing files are never overwritten — not even a corrupt one — because init
+ * must not be able to destroy data.
+ */
+export function initDataDir(dataDir: string): InitResult {
+  mkdirSync(dataDir, { recursive: true });
+  const emptyPool: Pool = { version: 1, projects: [] };
+  const emptyBook: IdeaBook = { version: 1, ideas: [] };
+  const files: Array<[string, unknown]> = [
+    [poolFile(dataDir), emptyPool],
+    [ideasFile(dataDir), emptyBook],
+  ];
+
+  const created: string[] = [];
+  const skipped: string[] = [];
+  for (const [file, value] of files) {
+    if (existsSync(file)) {
+      skipped.push(file);
+      continue;
+    }
+    writeJsonFile(file, value);
+    created.push(file);
+  }
+  return { created, skipped };
 }

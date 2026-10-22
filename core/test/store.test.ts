@@ -11,6 +11,7 @@ import {
   readIdeas,
   readPlan,
   readPool,
+  readPoolIfPresent,
   writeIdeas,
   writePlan,
   writePool,
@@ -106,4 +107,16 @@ test('readPool rejects malformed JSON with the file path', (t) => {
   const dir = makeTempDir(t);
   writeFileSync(poolFile(dir), '{oops', 'utf8');
   assert.throws(() => readPool(dir), /无法解析 JSON/);
+});
+
+test('readPoolIfPresent reads a missing pool as empty', (t) => {
+  const dir = makeTempDir(t);
+  assert.deepEqual(readPoolIfPresent(dir), { version: 1, projects: [] });
+});
+
+test('readPoolIfPresent still rejects malformed JSON', (t) => {
+  const dir = makeTempDir(t);
+  writeFileSync(poolFile(dir), '{oops', 'utf8');
+  assert.throws(() => readPoolIfPresent(dir), /无法解析 JSON/);
+  assert.equal(readFileSync(poolFile(dir), 'utf8'), '{oops');
 });

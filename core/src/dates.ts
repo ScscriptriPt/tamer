@@ -1,4 +1,5 @@
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MS_PER_DAY = 86_400_000;
 
 function pad(value: number): string {
@@ -43,6 +44,11 @@ export function isDateString(value: unknown): value is string {
   }
 }
 
+/** Strict local wall-clock time, HH:MM, 00:00–23:59. */
+export function isTimeString(value: unknown): value is string {
+  return typeof value === 'string' && TIME_PATTERN.test(value);
+}
+
 export function toDayNumber(date: string): number {
   const { year, month, day } = parseDate(date);
   return Math.floor(Date.UTC(year, month - 1, day) / MS_PER_DAY);
@@ -72,4 +78,9 @@ export function formatShortDate(date: string): string {
  */
 export function todayLocal(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** Local wall-clock time as HH:MM; the CLI is the only caller that reads the clock. */
+export function timeLocal(now: Date = new Date()): string {
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }

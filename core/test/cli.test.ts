@@ -102,7 +102,14 @@ function readPlanFile(dataDir: string, date: string) {
 test('CLI plan new emits the morning message and writes the plan', (t) => {
   const dir = makeDataDir(t, seedProjects());
 
-  const created = run(dir, ['plan', 'new', '--date', '2026-10-23']);
+  const created = run(dir, [
+    'plan',
+    'new',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '08:00',
+  ]);
   assert.equal(created.status, 0);
   assert.match(created.stdout, /^早。今天三块：\n/);
   assert.match(created.stdout, /主线一 —— 《微波技术》/);
@@ -124,6 +131,8 @@ test('CLI plan new emits the morning message and writes the plan', (t) => {
     '--morning',
     '--date',
     '2026-10-23',
+    '--now',
+    '08:00',
   ]);
   assert.equal(rendered.status, 0);
   assert.equal(rendered.stdout, created.stdout);
@@ -327,6 +336,8 @@ test('CLI plan new applies per-block action and done-when, whole copy as fallbac
     'new',
     '--date',
     '2026-10-23',
+    '--now',
+    '08:00',
     '--action',
     '整体动作',
     '--action',
@@ -366,13 +377,63 @@ test('CLI plan new lets per-block copy win over the whole --action', (t) => {
 test('CLI plan new renders the repeated project with two distinct lines', (t) => {
   const dir = makeDataDir(t, seedProjects());
 
-  const created = run(dir, ['plan', 'new', '--date', '2026-10-23']);
+  const created = run(dir, [
+    'plan',
+    'new',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '08:00',
+  ]);
   assert.equal(created.status, 0);
   const lines = created.stdout
     .split('\n')
     .filter((line) => line.startsWith('**'));
   assert.equal(lines.length, 3);
   assert.notEqual(lines[0], lines[1]);
+});
+
+test('CLI --now marks elapsed blocks, all-elapsed, and rejects bad times', (t) => {
+  const dir = makeDataDir(t, seedProjects());
+  run(dir, ['plan', 'new', '--date', '2026-10-23', '--now', '08:00']);
+
+  const partial = run(dir, [
+    'plan',
+    'render',
+    '--morning',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '10:30',
+  ]);
+  assert.equal(partial.status, 0);
+  assert.match(partial.stdout, /^现在 10:30，前 1 块已过。\n\n/);
+  assert.doesNotMatch(partial.stdout, /09:00–10:30/);
+  assert.match(partial.stdout, /14:00–15:00/);
+
+  const all = run(dir, [
+    'plan',
+    'render',
+    '--morning',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '15:00',
+  ]);
+  assert.equal(all.status, 0);
+  assert.equal(all.stdout, '现在 15:00，今天三块都过了。\n');
+
+  const invalid = run(dir, [
+    'plan',
+    'render',
+    '--morning',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '9:00',
+  ]);
+  assert.equal(invalid.status, 1);
+  assert.match(invalid.stderr, /无效的时间/);
 });
 
 test('CLI rejects an impossible date with exit 1', (t) => {

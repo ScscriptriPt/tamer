@@ -1,5 +1,5 @@
 import type { Idea, Plan, Pool } from './types.ts';
-import { daysBetween } from './dates.ts';
+import { daysBetween, isTimeString } from './dates.ts';
 
 const MAIN_LABELS = ['一', '二', '三', '四'];
 const CN_NUMBERS = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
@@ -10,17 +10,25 @@ export type MorningOptions = {
   due?: Idea[];
   /** day the message describes; defaults to plan.date, never the clock */
   today?: string;
+  /**
+   * local HH:MM supplied by the caller. When set, blocks whose end is at or
+   * before now are treated as elapsed; omitted, output is byte-identical.
+   */
+  now?: string;
 };
 
 export function countLabel(count: number): string {
   return CN_NUMBERS[count] ?? String(count);
 }
 
+function blockCountLabel(count: number): string {
+  return count === 2 ? '两' : countLabel(count);
+}
+
 /** Morning title, e.g. `早。今天三块：`. Zero blocks render nothing. */
 export function morningTitle(count: number): string {
   if (count <= 0) return '';
-  const label = count === 2 ? '两' : countLabel(count);
-  return `早。今天${label}块：`;
+  return `早。今天${blockCountLabel(count)}块：`;
 }
 
 function projectTitle(pool: Pool, projectId: string): string {
@@ -64,7 +72,23 @@ export function renderMorning(
   if (plan.day_type === 'exception') return '';
   if (plan.blocks.length === 0) return '';
 
-  const lines: string[] = [morningTitle(plan.blocks.length), ''];
+  const now = options.now;
+  if (now !== undefined && !isTimeString(now)) {
+    throw new Error(`无效的时间：${now}（要求 HH:MM）`);
+  }
+  const elapsed =
+    now === undefined
+      ? 0
+      : plan.blocks.filter((block) => block.end <= now).length;
+
+  if (now !== undefined && elapsed === plan.blocks.length) {
+    return `现在 ${now}，今天${blockCountLabel(plan.blocks.length)}块都过了。`;
+  }
+
+  const lines: string[] =
+    now !== undefined && elapsed > 0
+      ? [`现在 ${now}，前 ${elapsed} 块已过。`, '']
+      : [morningTitle(plan.blocks.length), ''];
   let mainIndex = 0;
 
   for (const block of plan.blocks) {
@@ -75,6 +99,8 @@ export function renderMorning(
     } else {
       label = '支线';
     }
+    // Numbering follows the whole day, so a remaining 主线二 stays 主线二.
+    if (now !== undefined && block.end <= now) continue;
     const title = oneLine(projectTitle(pool, block.project_id));
     lines.push(
       `**${block.start}–${block.end}** ${label} —— 《${title}》下一步：${oneLine(block.action)}`,

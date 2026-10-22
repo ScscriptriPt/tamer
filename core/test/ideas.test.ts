@@ -529,7 +529,14 @@ test('CLI: idea list --due returns only due wake ideas', (t) => {
 
 test('CLI: a future wake leaves the morning message byte-identical', (t) => {
   const dir = makeDataDir(t, seedProjects());
-  const created = run(dir, ['plan', 'new', '--date', '2026-10-23']);
+  const created = run(dir, [
+    'plan',
+    'new',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '08:00',
+  ]);
   assert.equal(created.status, 0);
 
   assert.equal(
@@ -551,6 +558,8 @@ test('CLI: a future wake leaves the morning message byte-identical', (t) => {
     '--morning',
     '--date',
     '2026-10-23',
+    '--now',
+    '08:00',
   ]);
   assert.equal(rendered.stdout, created.stdout);
   assert.doesNotMatch(rendered.stdout, /到期唤醒/);
@@ -571,7 +580,14 @@ test('CLI: a due idea appends 到期唤醒 to the morning message', (t) => {
     0,
   );
 
-  const created = run(dir, ['plan', 'new', '--date', '2026-10-23']);
+  const created = run(dir, [
+    'plan',
+    'new',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '08:00',
+  ]);
   assert.equal(created.status, 0);
   assert.ok(
     created.stdout.endsWith('到期唤醒：想试试 nvim（8 天前）\n'),
@@ -585,6 +601,8 @@ test('CLI: a due idea appends 到期唤醒 to the morning message', (t) => {
     '--morning',
     '--date',
     '2026-10-23',
+    '--now',
+    '08:00',
   ]);
   assert.equal(rendered.stdout, created.stdout);
 });

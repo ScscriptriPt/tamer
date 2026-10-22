@@ -449,7 +449,14 @@ test('CLI breakpoint flows into the next day first block', (t) => {
   ]);
   assert.equal(written.status, 0);
 
-  const nextDay = run(dir, ['plan', 'new', '--date', '2026-10-23']);
+  const nextDay = run(dir, [
+    'plan',
+    'new',
+    '--date',
+    '2026-10-23',
+    '--now',
+    '08:00',
+  ]);
   assert.equal(nextDay.status, 0);
   assert.match(
     nextDay.stdout,

@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isDateString, parseDate, todayLocal } from './dates.ts';
+import { isDateString, isTimeString, parseDate, timeLocal, todayLocal } from './dates.ts';
 import {
   IDEA_STATES,
   addIdea,
@@ -47,9 +47,9 @@ class CliError extends Error {
 
 const USAGE = `用法：
   node core/src/cli.ts init
-  node core/src/cli.ts plan new --date YYYY-MM-DD [--day-type normal|exception] [--exception] [--action "整体动作"] [--action 项目#N="该块动作"]
+  node core/src/cli.ts plan new --date YYYY-MM-DD [--now HH:MM] [--day-type normal|exception] [--exception] [--action "整体动作"] [--action 项目#N="该块动作"]
   node core/src/cli.ts plan show --date YYYY-MM-DD
-  node core/src/cli.ts plan render --morning --date YYYY-MM-DD
+  node core/src/cli.ts plan render --morning --date YYYY-MM-DD [--now HH:MM]
   node core/src/cli.ts plan render --evening --step 1|2 --date YYYY-MM-DD
   node core/src/cli.ts plan review --date YYYY-MM-DD --block N [--done|--undone] [--note 文本]
   node core/src/cli.ts plan breakpoint --date YYYY-MM-DD --block N --did "做了什么" [--stuck "卡在哪"] --next "下一步动作" [--at 时间戳]
@@ -193,11 +193,26 @@ function writeText(text: string): void {
 /**
  * Morning text for one plan date. The plan date is also the notion of
  * "today" for due wake-ups, so rendering is deterministic and never reads the
- * system clock.
+ * system clock. `--now HH:MM` overrides the local wall-clock time.
  */
-function morningText(dataDir: string, plan: Plan, pool: Pool): string {
+function morningText(
+  dataDir: string,
+  plan: Plan,
+  pool: Pool,
+  now: string,
+): string {
   const due = dueIdeas(store.readIdeasIfPresent(dataDir), plan.date);
-  return renderMorning(plan, pool, { due, today: plan.date });
+  return renderMorning(plan, pool, { due, today: plan.date, now });
+}
+
+/** `--now HH:MM` wins; otherwise the CLI layer, not core, reads the clock. */
+function nowFlag(flags: Record<string, FlagValue>): string {
+  const raw = stringFlag(flags, 'now');
+  if (raw === undefined) return timeLocal();
+  if (!isTimeString(raw)) {
+    throw new CliError(`无效的时间：${raw}（要求 HH:MM）`);
+  }
+  return raw;
 }
 
 function initCommand(dataDir: string): number {
@@ -225,6 +240,7 @@ function planNew(
   }
   const date = dateFlag(flags);
   const dayType = dayTypeFlag(flags);
+  const now = nowFlag(flags);
   const pool = store.readPool(dataDir);
   const existing = store.readPlan(dataDir, date);
 
@@ -248,7 +264,7 @@ function planNew(
   });
 
   store.writePlan(dataDir, plan);
-  writeText(morningText(dataDir, plan, pool));
+  writeText(morningText(dataDir, plan, pool, now));
   return 0;
 }
 
@@ -293,7 +309,7 @@ function planRender(
   }
 
   const pool = store.readPool(dataDir);
-  writeText(morningText(dataDir, plan, pool));
+  writeText(morningText(dataDir, plan, pool, nowFlag(flags)));
   return 0;
 }
 

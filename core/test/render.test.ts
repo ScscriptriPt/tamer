@@ -48,6 +48,46 @@ test('renderMorning matches the v0.01 format byte for byte', () => {
   const p = morningPool();
   const plan = buildPlan(p, DATE);
   assert.equal(renderMorning(plan, p), EXPECTED);
+  assert.equal(renderMorning(plan, p, { now: undefined }), EXPECTED);
+});
+
+test('renderMorning before the first block keeps the old title unchanged', () => {
+  const p = morningPool();
+  const plan = buildPlan(p, DATE);
+  assert.equal(renderMorning(plan, p, { now: '08:00' }), EXPECTED);
+});
+
+test('renderMorning marks a block ending exactly at now as elapsed', () => {
+  const p = morningPool();
+  const text = renderMorning(buildPlan(p, DATE), p, { now: '10:30' });
+  assert.equal(
+    text,
+    [
+      '现在 10:30，前 1 块已过。',
+      '',
+      '**10:45–11:45** 主线二 —— 《微波技术》下一步：接着上一块往下做，收手前留一句断点',
+      '**14:00–15:00** 支线 —— 《HTB 靶机》下一步：打靶',
+      '',
+      '搁置中：Notion→Obsidian 迁移（10-27 唤醒）',
+      '今天不要做：换笔记软件 / 开新项目',
+    ].join('\n'),
+  );
+  assert.equal(text.includes('09:00–10:30'), false);
+});
+
+test('renderMorning with every block elapsed prints exactly one line', () => {
+  const p = morningPool();
+  const text = renderMorning(buildPlan(p, DATE), p, { now: '15:00' });
+  assert.equal(text, '现在 15:00，今天三块都过了。');
+  assert.equal(text.split('\n').length, 1);
+});
+
+test('renderMorning rejects a malformed now', () => {
+  const p = morningPool();
+  assert.throws(
+    () => renderMorning(buildPlan(p, DATE), p, { now: '9:00' }),
+    /无效的时间/,
+  );
 });
 
 test('renderMorning is deterministic and has no CR or trailing newline', () => {

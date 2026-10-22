@@ -11,7 +11,8 @@ export type Project = {
   deadline: string | null;
   wake_at: string | null;
   last_touched: string | null;
-  progress: number | null;
+  /** @deprecated 临时字段，promote 不再写入；将来由 milestones 派生 */
+  progress?: number | null;
   /** one-line description: what this project is / how far it got */
   note: string | null;
   /** one concrete action that can start within 90 minutes */

@@ -221,7 +221,7 @@ export function r4Candidates(pool: Pool): Project[] {
   const started = sides
     .filter(
       (project) =>
-        project.progress !== null && project.progress > 0 && project.progress < 1,
+        project.progress != null && project.progress > 0 && project.progress < 1,
     )
     .sort((a, b) => compareLastTouchedDesc(a, b, order));
   const startedIds = new Set(started.map((project) => project.id));

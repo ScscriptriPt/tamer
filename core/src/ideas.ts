@@ -233,6 +233,8 @@ export function discardIdea(
 export type PromoteOptions = {
   kind?: ProjectKind;
   deadline?: string | null;
+  /** one concrete action that can start within 90 minutes; required */
+  next: string;
   /** caller-supplied date used for last_touched; core never reads a clock */
   today: string;
 };
@@ -300,9 +302,8 @@ export function promoteIdea(
     deadline,
     wake_at: null,
     last_touched: options.today,
-    progress: 0,
     note: existing.text,
-    next_action: null,
+    next_action: options.next,
   };
   const idea: Idea = { ...existing, state: 'promoted' };
 

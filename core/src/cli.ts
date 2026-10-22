@@ -55,7 +55,7 @@ const USAGE = `用法：
   node core/src/cli.ts idea add "想法" [--same <id>] [--wake 7|30|YYYY-MM-DD] [--date YYYY-MM-DD]
   node core/src/cli.ts idea list [--state graveyard|explore|wake|promoted|discarded] [--due] [--date YYYY-MM-DD]
   node core/src/cli.ts idea wake <id> --at YYYY-MM-DD
-  node core/src/cli.ts idea promote <id> [--kind main|side] [--deadline YYYY-MM-DD]
+  node core/src/cli.ts idea promote <id> --next "一句话动作" [--kind main|side] [--deadline YYYY-MM-DD]
   node core/src/cli.ts idea discard <id> --reason "一句话"
 可选：--data-dir <目录>（默认 E:\\驯兽师\\data）
 逐块文案：#N 表示当天该项目的第 N 块，例如 --action microwave#1="翻目录"；逐块优先于整体。`;
@@ -450,6 +450,12 @@ function ideaPromote(
 ): number {
   const id = ideaById(positionals);
 
+  const rawNext = stringFlag(flags, 'next');
+  if (rawNext === undefined || rawNext.trim() === '') {
+    throw new CliError('升级必须给一个下一步动作（--next）');
+  }
+  const next = rawNext.trim();
+
   const rawKind = stringFlag(flags, 'kind');
   let kind: ProjectKind = 'side';
   if (rawKind !== undefined) {
@@ -465,7 +471,7 @@ function ideaPromote(
   const today = dateFlag(flags);
   const book = store.readIdeas(dataDir);
   const pool = store.readPool(dataDir);
-  const outcome = promoteIdea(book, pool, id, { kind, deadline, today });
+  const outcome = promoteIdea(book, pool, id, { kind, deadline, next, today });
 
   if (!outcome.ok) {
     if (outcome.reason === 'occurrences') {

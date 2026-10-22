@@ -123,6 +123,7 @@ test('R9: main and side both cap at two active projects', () => {
   ]);
   const main = promoteIdea(current, fullMain, 'idea-20261022-1', {
     kind: 'main',
+    next: '打开 nvim 教程读完第一章',
     today: '2026-10-22',
   });
   assert.equal(main.ok, false);
@@ -138,6 +139,7 @@ test('R9: main and side both cap at two active projects', () => {
   assert.equal(
     promoteIdea(current, room, 'idea-20261022-1', {
       kind: 'main',
+      next: '打开 nvim 教程读完第一章',
       today: '2026-10-22',
     }).ok,
     true,
@@ -149,6 +151,7 @@ test('R9: main and side both cap at two active projects', () => {
   ]);
   const side = promoteIdea(current, fullSide, 'idea-20261022-1', {
     kind: 'side',
+    next: '打开 nvim 教程读完第一章',
     today: '2026-10-22',
   });
   assert.equal(side.ok, false);
@@ -340,6 +343,8 @@ test('CLI: --same three times then promote writes the project into pool.json', (
     'idea',
     'promote',
     id,
+    '--next',
+    '打开 nvim 教程读完第一章',
     '--date',
     '2026-10-22',
   ]);
@@ -347,6 +352,8 @@ test('CLI: --same three times then promote writes the project into pool.json', (
 
   const pool = readPoolFile(dir);
   assert.equal(pool.projects.length, 1);
+  assert.equal('progress' in pool.projects[0], false);
+  assert.equal(pool.projects[0].next_action, '打开 nvim 教程读完第一章');
   assert.deepEqual(
     {
       id: pool.projects[0].id,
@@ -364,6 +371,17 @@ test('CLI: --same three times then promote writes the project into pool.json', (
   assert.equal(readIdeasFile(dir).ideas[0].state, 'promoted');
 });
 
+test('CLI: promote without --next exits 1 and writes nothing', (t) => {
+  const dir = makeDataDir(t);
+  const id = addThreeTimes(dir, '想试试 nvim');
+
+  const refused = run(dir, ['idea', 'promote', id, '--date', '2026-10-22']);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /升级必须给一个下一步动作（--next）/);
+  assert.equal(readPoolFile(dir).projects.length, 0);
+  assert.equal(readIdeasFile(dir).ideas[0].state, 'graveyard');
+});
+
 test('CLI: promoting after two captures exits 3 with 还差 1 次', (t) => {
   const dir = makeDataDir(t);
   const id = addCaptured(dir, '想试试 nvim');
@@ -377,6 +395,8 @@ test('CLI: promoting after two captures exits 3 with 还差 1 次', (t) => {
     'idea',
     'promote',
     id,
+    '--next',
+    '打开 nvim 教程读完第一章',
     '--date',
     '2026-10-22',
   ]);
@@ -399,6 +419,8 @@ test('CLI: a full main quota exits 4 and leaves the idea untouched', (t) => {
     id,
     '--kind',
     'main',
+    '--next',
+    '打开 nvim 教程读完第一章',
     '--date',
     '2026-10-22',
   ]);
@@ -542,7 +564,15 @@ test('CLI: illegal idea transitions exit 1 and leave the book unchanged', (t) =>
   const dir = makeDataDir(t);
   const id = addThreeTimes(dir, '想试试 nvim');
   assert.equal(
-    run(dir, ['idea', 'promote', id, '--date', '2026-10-22']).status,
+    run(dir, [
+      'idea',
+      'promote',
+      id,
+      '--next',
+      '打开 nvim 教程读完第一章',
+      '--date',
+      '2026-10-22',
+    ]).status,
     0,
   );
 

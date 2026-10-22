@@ -1,0 +1,16 @@
+# 个人数据，绝不提交
+data/
+
+# pi 本地实例：含 auth.json 凭证与会话记录
+.pi-agent/
+
+# 上游源码副本（自带 .git，不应作为子模块塞进来）
+vendor/
+
+# 依赖与产物
+node_modules/
+*.log
+
+# 编辑器
+.vscode/
+.idea/

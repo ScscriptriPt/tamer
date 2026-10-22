@@ -1,0 +1,4 @@
+# 渲染结果逐字节比对依赖 LF，禁止自动转换
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary

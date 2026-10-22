@@ -15,12 +15,13 @@
 
 | 能力 | 命令 | 状态 |
 |---|---|---|
+| 从零初始化 | `init` | 完成 |
 | 生成当天计划 | `plan new --date 2026-10-23` | 完成 |
 | 渲染早间消息 | `plan render --morning` | 完成 |
 | 记录断点 | `plan breakpoint --block 1 --did … --next …` | 完成 |
 | 次日继承断点 | 自动（只认 D-1 / D-2） | 完成 |
 | 晚间验收回写 | `plan review --block 1 --done --note …` | 完成 |
-| 想法分流与三次门槛 | `idea add / promote / discard` | 开发中 |
+| 想法分流与三次门槛 | `idea add / promote / discard` | 完成 |
 | 里程碑与守门员 | — | 未开始 |
 
 ## 怎么跑

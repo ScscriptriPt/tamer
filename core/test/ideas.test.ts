@@ -111,39 +111,30 @@ test('resolveWakeAt turns 7/30 into day offsets and keeps absolute dates', () =>
   assert.throws(() => resolveWakeAt('soon', '2026-10-22'), /无效的 --wake/);
 });
 
-test('R9: main and side both cap at two active projects', () => {
+test('R9: main has no cap, side caps at two active projects', () => {
   const current = book([
     idea({ id: 'idea-20261022-1', occurrences: 3 }),
   ]);
 
-  const fullMain = poolOf([
+  const fiveMains = poolOf([
     project({ id: 'm1' }),
     project({ id: 'm2' }),
-    project({ id: 's1', kind: 'side', status: 'paused' }),
+    project({ id: 'm3' }),
+    project({ id: 'm4' }),
+    project({ id: 'm5' }),
   ]);
-  const main = promoteIdea(current, fullMain, 'idea-20261022-1', {
+  const main = promoteIdea(current, fiveMains, 'idea-20261022-1', {
     kind: 'main',
     next: '打开 nvim 教程读完第一章',
     today: '2026-10-22',
   });
-  assert.equal(main.ok, false);
-  if (!main.ok && main.reason === 'quota') {
-    assert.equal(main.kind, 'main');
-    assert.equal(main.active, 2);
-    assert.equal(main.limit, 2);
+  assert.equal(main.ok, true);
+  if (main.ok) {
+    assert.equal(main.project.kind, 'main');
+    assert.equal(main.pool.projects.length, 6);
   } else {
-    assert.fail('expected a quota failure');
+    assert.fail('main must not be capped');
   }
-
-  const room = poolOf([project({ id: 'm1' })]);
-  assert.equal(
-    promoteIdea(current, room, 'idea-20261022-1', {
-      kind: 'main',
-      next: '打开 nvim 教程读完第一章',
-      today: '2026-10-22',
-    }).ok,
-    true,
-  );
 
   const fullSide = poolOf([
     project({ id: 's1', kind: 'side' }),
@@ -155,6 +146,13 @@ test('R9: main and side both cap at two active projects', () => {
     today: '2026-10-22',
   });
   assert.equal(side.ok, false);
+  if (!side.ok && side.reason === 'quota') {
+    assert.equal(side.kind, 'side');
+    assert.equal(side.active, 2);
+    assert.equal(side.limit, 2);
+  } else {
+    assert.fail('expected a side quota failure');
+  }
 });
 
 test('R11: illegal state transitions throw, legal ones update in place', () => {
@@ -406,10 +404,13 @@ test('CLI: promoting after two captures exits 3 with 还差 1 次', (t) => {
   assert.equal(readIdeasFile(dir).ideas[0].state, 'graveyard');
 });
 
-test('CLI: a full main quota exits 4 and leaves the idea untouched', (t) => {
+test('CLI: five active mains do not block a sixth main promotion', (t) => {
   const dir = makeDataDir(t, [
     project({ id: 'main-a' }),
     project({ id: 'main-b' }),
+    project({ id: 'main-c' }),
+    project({ id: 'main-d' }),
+    project({ id: 'main-e' }),
   ]);
   const id = addThreeTimes(dir, '想试试 nvim');
 
@@ -424,8 +425,36 @@ test('CLI: a full main quota exits 4 and leaves the idea untouched', (t) => {
     '--date',
     '2026-10-22',
   ]);
+  assert.equal(promoted.status, 0);
+
+  const pool = readPoolFile(dir);
+  assert.equal(pool.projects.length, 6);
+  assert.equal(pool.projects[5].id, id);
+  assert.equal(pool.projects[5].kind, 'main');
+  assert.equal(readIdeasFile(dir).ideas[0].state, 'promoted');
+});
+
+test('CLI: a full side quota exits 4 and leaves the idea untouched', (t) => {
+  const dir = makeDataDir(t, [
+    project({ id: 'side-a', kind: 'side' }),
+    project({ id: 'side-b', kind: 'side' }),
+  ]);
+  const id = addThreeTimes(dir, '想试试 nvim');
+
+  const promoted = run(dir, [
+    'idea',
+    'promote',
+    id,
+    '--kind',
+    'side',
+    '--next',
+    '打开 nvim 教程读完第一章',
+    '--date',
+    '2026-10-22',
+  ]);
   assert.equal(promoted.status, 4);
   assert.match(promoted.stderr, /名额已满/);
+  assert.match(promoted.stderr, /上限 2/);
   assert.match(promoted.stderr, /discard/);
   assert.equal(readPoolFile(dir).projects.length, 2);
   assert.equal(readIdeasFile(dir).ideas[0].state, 'graveyard');

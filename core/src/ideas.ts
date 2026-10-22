@@ -37,9 +37,9 @@ export const IDEA_STATES: readonly IdeaState[] = [
 /** R8: the same idea must show up three times before it may be promoted. */
 export const PROMOTE_THRESHOLD = 3;
 
-/** R9: at most two active projects of each kind. */
-export const MAX_ACTIVE: Record<ProjectKind, number> = {
-  main: 2,
+/** R9: main has no cap; at most two active side projects. */
+export const MAX_ACTIVE: Record<ProjectKind, number | null> = {
+  main: null,
   side: 2,
 };
 
@@ -290,7 +290,7 @@ export function promoteIdea(
   const active = pool.projects.filter(
     (project) => project.kind === kind && project.status === 'active',
   ).length;
-  if (active >= limit) {
+  if (limit !== null && active >= limit) {
     return { ok: false, reason: 'quota', kind, limit, active };
   }
 

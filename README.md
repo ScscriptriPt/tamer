@@ -50,7 +50,9 @@ node --test core/test
 | v0.02 | 断点闭环：断点写入、次日继承（R7）、78 条测试 |
 | v0.03 | 想法分流：三次门槛、名额检查、到期唤醒 |
 
-详细规格见 [`docs/`](docs/)，演进记录见 [CHANGELOG.md](CHANGELOG.md)。
+详细规格见 [`docs/`](docs/)，演进记录见 [CHANGELOG.md](CHANGELOG.md)，版本与发布规则见 [docs/版本与发布.md](docs/版本与发布.md)。
+
+> 当前**未发布**：下一个版本号是 `v0.1.0`，条件是每日闭环连续跑满 7 天。
 
 ## 不做什么
 
